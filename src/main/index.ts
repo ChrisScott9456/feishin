@@ -22,7 +22,8 @@ import {
 import electronLocalShortcut from 'electron-localshortcut';
 import log from 'electron-log/main';
 import { AppImageUpdater, autoUpdater, MacUpdater, NsisUpdater } from 'electron-updater';
-import { access, constants } from 'fs';
+import { access, constants, promises as fsPromises } from 'fs';
+import { TagLib } from 'taglib-wasm';
 import path, { join } from 'path';
 import semver from 'semver';
 
@@ -1043,6 +1044,63 @@ if (!ipcMain.eventNames().includes('open-item')) {
             });
         });
     });
+}
+
+// Lazily initialized taglib-wasm singleton
+let _taglib: TagLib | null = null;
+const getTagLib = async (): Promise<TagLib> => {
+    if (!_taglib) _taglib = await TagLib.initialize();
+    return _taglib;
+};
+
+if (!ipcMain.eventNames().includes('check-file-writable')) {
+    ipcMain.handle('check-file-writable', async (_event, filePath: string) => {
+        return new Promise<{ error?: string; ok: boolean }>((resolve) => {
+            access(filePath, constants.F_OK | constants.W_OK, (err) => {
+                if (err) resolve({ error: err.message, ok: false });
+                else resolve({ ok: true });
+            });
+        });
+    });
+}
+
+if (!ipcMain.eventNames().includes('read-song-tags')) {
+    ipcMain.handle('read-song-tags', async (_event, filePath: string) => {
+        try {
+            const buf = await fsPromises.readFile(filePath);
+            const taglib = await getTagLib();
+            const file = await taglib.open(buf);
+            const properties = file.properties();
+            file.dispose();
+            return { ok: true, properties };
+        } catch (err) {
+            return { error: String(err), ok: false };
+        }
+    });
+}
+
+if (!ipcMain.eventNames().includes('write-song-tags')) {
+    ipcMain.handle(
+        'write-song-tags',
+        async (_event, filePath: string, tags: Record<string, string>) => {
+            try {
+                await fsPromises.access(filePath, constants.F_OK | constants.W_OK);
+                const buf = await fsPromises.readFile(filePath);
+                const taglib = await getTagLib();
+                const modified = await taglib.edit(buf, (file) => {
+                    const propertyMap: Record<string, string[]> = {};
+                    for (const [k, v] of Object.entries(tags)) {
+                        propertyMap[k] = v === '' ? [] : [v];
+                    }
+                    file.setProperties(propertyMap);
+                });
+                await fsPromises.writeFile(filePath, modified);
+                return { ok: true };
+            } catch (err) {
+                return { error: String(err), ok: false };
+            }
+        },
+    );
 }
 
 // Register 'open-application-directory' handler globally, ensuring it is only registered once

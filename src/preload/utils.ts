@@ -6,6 +6,23 @@ const openItem = async (path: string) => {
     return ipcRenderer.invoke('open-item', path);
 };
 
+const checkFileWritable = (filePath: string): Promise<{ error?: string; ok: boolean }> => {
+    return ipcRenderer.invoke('check-file-writable', filePath);
+};
+
+const readSongTags = (
+    filePath: string,
+): Promise<{ error?: string; ok: boolean; properties?: Record<string, string[]> }> => {
+    return ipcRenderer.invoke('read-song-tags', filePath);
+};
+
+const writeSongTags = (
+    filePath: string,
+    tags: Record<string, string>,
+): Promise<{ error?: string; ok: boolean }> => {
+    return ipcRenderer.invoke('write-song-tags', filePath, tags);
+};
+
 const openApplicationDirectory = async () => {
     return ipcRenderer.invoke('open-application-directory');
 };
@@ -86,6 +103,7 @@ const rendererOpenReleaseNotes = (cb: (event: IpcRendererEvent) => void) => {
 };
 
 export const utils = {
+    checkFileWritable,
     checkForUpdates,
     disableAutoUpdates,
     download,
@@ -98,12 +116,14 @@ export const utils = {
     openApplicationDirectory,
     openItem,
     playerErrorListener,
+    readSongTags,
     rendererOpenCommandPalette,
     rendererOpenManageServers,
     rendererOpenReleaseNotes,
     rendererOpenSettings,
     rendererTogglePrivateMode,
     rendererToggleSidebar,
+    writeSongTags,
 };
 
 export type Utils = typeof utils;
