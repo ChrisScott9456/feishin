@@ -1372,6 +1372,16 @@ export type ScrobbleQuery = {
 // Scrobble
 export type ScrobbleResponse = null;
 
+export type StartScanArgs = BaseEndpointArgs;
+
+export type StartScanResponse = {
+    count: number;
+    folderCount: number;
+    lastScan?: string;
+    scanning: boolean;
+} | null;
+
+
 export type SearchAlbumArtistsQuery = {
     albumArtistLimit?: number;
     albumArtistStartIndex?: number;
@@ -1536,6 +1546,7 @@ export type ControllerEndpoint = {
         args: UploadInternetRadioStationImageArgs,
     ) => Promise<UploadInternetRadioStationImageResponse>;
     uploadPlaylistImage?: (args: UploadPlaylistImageArgs) => Promise<UploadPlaylistImageResponse>;
+    startScan: (args: StartScanArgs) => Promise<StartScanResponse>;
 };
 
 export type DownloadArgs = BaseEndpointArgs & {
@@ -1710,6 +1721,7 @@ export type InternalControllerEndpoint = {
     uploadPlaylistImage?: (
         args: ReplaceApiClientProps<UploadPlaylistImageArgs>,
     ) => Promise<UploadPlaylistImageResponse>;
+    startScan: (args: ReplaceApiClientProps<StartScanArgs>) => Promise<StartScanResponse>;
 };
 
 export type LyricGetQuery = {

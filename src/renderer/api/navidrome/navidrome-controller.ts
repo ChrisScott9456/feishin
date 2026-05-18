@@ -1414,4 +1414,5 @@ export const NavidromeController: InternalControllerEndpoint = {
 
         return res.data?.status === 'ok';
     },
+    startScan: SubsonicController.startScan,
 };
