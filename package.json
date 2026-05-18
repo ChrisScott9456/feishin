@@ -138,6 +138,7 @@
         "react-window-v2": "npm:react-window@^2.2.7",
         "semver": "^7.7.4",
         "string-to-color": "^2.2.2",
+        "taglib-wasm": "^1.2.1",
         "wavesurfer.js": "^7.12.5",
         "ws": "^8.20.0",
         "zod": "^3.25.76",
