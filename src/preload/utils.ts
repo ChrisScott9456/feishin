@@ -19,8 +19,21 @@ const readSongTags = (
 const writeSongTags = (
     filePath: string,
     tags: Record<string, string>,
+    artworkOp?: { bytes: Uint8Array; mimeType: string; type: 'set' } | { type: 'clear' },
 ): Promise<{ error?: string; ok: boolean }> => {
-    return ipcRenderer.invoke('write-song-tags', filePath, tags);
+    return ipcRenderer.invoke('write-song-tags', filePath, tags, artworkOp);
+};
+
+const readSongArtwork = (
+    filePath: string,
+): Promise<{ data?: null | string; error?: string; mimeType?: string; ok: boolean }> => {
+    return ipcRenderer.invoke('read-song-artwork', filePath);
+};
+
+const readLocalImage = (
+    filePath: string,
+): Promise<{ data?: string; error?: string; mimeType?: string; ok: boolean }> => {
+    return ipcRenderer.invoke('read-local-image', filePath);
 };
 
 const openApplicationDirectory = async () => {
@@ -116,6 +129,8 @@ export const utils = {
     openApplicationDirectory,
     openItem,
     playerErrorListener,
+    readLocalImage,
+    readSongArtwork,
     readSongTags,
     rendererOpenCommandPalette,
     rendererOpenManageServers,

@@ -594,7 +594,11 @@
             "fileNotWritable": "File is not accessible or not writable",
             "triggerRescan": "Trigger library rescan after saving",
             "addField": "Add field…",
-            "emptyFields": "Fields cannot be empty"
+            "emptyFields": "Fields cannot be empty",
+            "tagsTab": "Tags",
+            "artworkTab": "Artwork",
+            "removeArtwork": "Remove Artwork",
+            "noArtwork": "No Artwork"
         },
         "playlist": {
             "reorder": "Reordering only enabled when sorting by ID"

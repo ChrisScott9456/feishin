@@ -24,6 +24,7 @@ import log from 'electron-log/main';
 import { AppImageUpdater, autoUpdater, MacUpdater, NsisUpdater } from 'electron-updater';
 import { access, constants, promises as fsPromises } from 'fs';
 import { TagLib } from 'taglib-wasm';
+import { applyCoverArt, clearPictures, readCoverArt } from 'taglib-wasm/simple';
 import path, { join } from 'path';
 import semver from 'semver';
 
@@ -1082,18 +1083,32 @@ if (!ipcMain.eventNames().includes('read-song-tags')) {
 if (!ipcMain.eventNames().includes('write-song-tags')) {
     ipcMain.handle(
         'write-song-tags',
-        async (_event, filePath: string, tags: Record<string, string>) => {
+        async (
+            _event,
+            filePath: string,
+            tags: Record<string, string>,
+            artworkOp?: { bytes: Uint8Array; mimeType: string; type: 'set' } | { type: 'clear' },
+        ) => {
             try {
                 await fsPromises.access(filePath, constants.F_OK | constants.W_OK);
                 const buf = await fsPromises.readFile(filePath);
                 const taglib = await getTagLib();
-                const modified = await taglib.edit(buf, (file) => {
+                let modified: Uint8Array = await taglib.edit(buf, (file) => {
                     const propertyMap: Record<string, string[]> = {};
                     for (const [k, v] of Object.entries(tags)) {
                         propertyMap[k] = v === '' ? [] : [v];
                     }
                     file.setProperties(propertyMap);
                 });
+                if (artworkOp?.type === 'clear') {
+                    modified = await clearPictures(modified);
+                } else if (artworkOp?.type === 'set') {
+                    modified = await applyCoverArt(
+                        modified,
+                        Buffer.from(artworkOp.bytes),
+                        artworkOp.mimeType,
+                    );
+                }
                 await fsPromises.writeFile(filePath, modified);
                 return { ok: true };
             } catch (err) {
@@ -1101,6 +1116,38 @@ if (!ipcMain.eventNames().includes('write-song-tags')) {
             }
         },
     );
+}
+
+if (!ipcMain.eventNames().includes('read-song-artwork')) {
+    ipcMain.handle('read-song-artwork', async (_event, filePath: string) => {
+        try {
+            const buf = await fsPromises.readFile(filePath);
+            const data = await readCoverArt(buf);
+            if (!data) return { ok: true, data: null };
+            const mimeType = data[0] === 0x89 ? 'image/png' : 'image/jpeg';
+            return { ok: true, data: Buffer.from(data).toString('base64'), mimeType };
+        } catch (err) {
+            return { error: String(err), ok: false };
+        }
+    });
+}
+
+if (!ipcMain.eventNames().includes('read-local-image')) {
+    ipcMain.handle('read-local-image', async (_event, filePath: string) => {
+        try {
+            const buf = await fsPromises.readFile(filePath);
+            const mimeType = /\.png$/i.test(filePath)
+                ? 'image/png'
+                : /\.gif$/i.test(filePath)
+                  ? 'image/gif'
+                  : /\.webp$/i.test(filePath)
+                    ? 'image/webp'
+                    : 'image/jpeg';
+            return { ok: true, data: buf.toString('base64'), mimeType };
+        } catch (err) {
+            return { error: String(err), ok: false };
+        }
+    });
 }
 
 // Register 'open-application-directory' handler globally, ensuring it is only registered once
