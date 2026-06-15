@@ -30,7 +30,6 @@ export const SongEditModal = ({ songs }: { songs: Song[] }) => {
         utils: window.api.utils,
     });
 
-    /// Handler for when the user selects a field to add from the dropdown.
     // After adding the field, scrolls to and focuses the new field's row in the table.
     const handleAddField = (key: null | string) => {
         editor.handleAddField(key);

@@ -1,3 +1,5 @@
+import { RiCloseLine } from 'react-icons/ri';
+
 import { Button } from '/@/shared/components/button/button';
 import { Checkbox } from '/@/shared/components/checkbox/checkbox';
 import { NumberInput } from '/@/shared/components/number-input/number-input';
@@ -66,7 +68,7 @@ export const TagFieldRow = ({
         </Table.Td>
         <Table.Td className={styles.removeCell}>
             <Button className={styles.removeButton} onClick={onRemove} size="sm" variant="subtle">
-                ×
+                <RiCloseLine size={16} />
             </Button>
         </Table.Td>
     </Table.Tr>
