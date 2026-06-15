@@ -1,38 +1,45 @@
 import { ipcRenderer, IpcRendererEvent, webFrame } from 'electron';
 
+import type {
+    ArtworkOp,
+    BatchProgress,
+    ReadLocalImageResult,
+    ReadSongMetadataBatchResult,
+    WriteSongTagsBatchResult,
+} from '../shared/types/tag-editor';
+
 import { disableAutoUpdates, isLinux, isMacOS, isWindows } from '../main/utils';
 
 const openItem = async (path: string) => {
     return ipcRenderer.invoke('open-item', path);
 };
 
-const checkFileWritable = (filePath: string): Promise<{ error?: string; ok: boolean }> => {
-    return ipcRenderer.invoke('check-file-writable', filePath);
+const cancelReadSongMetadata = (): void => {
+    ipcRenderer.invoke('cancel-read-song-metadata');
 };
 
-const readSongTags = (
-    filePath: string,
-): Promise<{ error?: string; ok: boolean; properties?: Record<string, string[]> }> => {
-    return ipcRenderer.invoke('read-song-tags', filePath);
+const readSongMetadataBatch = (filePaths: string[]): Promise<ReadSongMetadataBatchResult> => {
+    return ipcRenderer.invoke('read-song-metadata-batch', filePaths);
 };
 
-const writeSongTags = (
-    filePath: string,
-    tags: Record<string, string>,
-    artworkOp?: { bytes: Uint8Array; mimeType: string; type: 'set' } | { type: 'clear' },
-): Promise<{ error?: string; ok: boolean }> => {
-    return ipcRenderer.invoke('write-song-tags', filePath, tags, artworkOp);
+const writeSongTagsBatch = (
+    filePaths: string[],
+    edits: Record<string, string>,
+    removed: string[],
+    artworkOp?: ArtworkOp,
+): Promise<WriteSongTagsBatchResult> => {
+    return ipcRenderer.invoke('write-song-tags-batch', filePaths, edits, removed, artworkOp);
 };
 
-const readSongArtwork = (
-    filePath: string,
-): Promise<{ data?: null | string; error?: string; mimeType?: string; ok: boolean }> => {
-    return ipcRenderer.invoke('read-song-artwork', filePath);
+const onBatchProgress = (cb: (event: IpcRendererEvent, data: BatchProgress) => void) => {
+    ipcRenderer.on('batch-progress', cb);
 };
 
-const readLocalImage = (
-    filePath: string,
-): Promise<{ data?: string; error?: string; mimeType?: string; ok: boolean }> => {
+const offBatchProgress = (cb: (event: IpcRendererEvent, data: BatchProgress) => void) => {
+    ipcRenderer.removeListener('batch-progress', cb);
+};
+
+const readLocalImage = (filePath: string): Promise<ReadLocalImageResult> => {
     return ipcRenderer.invoke('read-local-image', filePath);
 };
 
@@ -116,7 +123,7 @@ const rendererOpenReleaseNotes = (cb: (event: IpcRendererEvent) => void) => {
 };
 
 export const utils = {
-    checkFileWritable,
+    cancelReadSongMetadata,
     checkForUpdates,
     disableAutoUpdates,
     download,
@@ -126,19 +133,20 @@ export const utils = {
     isWindows,
     logger,
     mainMessageListener,
+    offBatchProgress,
+    onBatchProgress,
     openApplicationDirectory,
     openItem,
     playerErrorListener,
     readLocalImage,
-    readSongArtwork,
-    readSongTags,
+    readSongMetadataBatch,
     rendererOpenCommandPalette,
     rendererOpenManageServers,
     rendererOpenReleaseNotes,
     rendererOpenSettings,
     rendererTogglePrivateMode,
     rendererToggleSidebar,
-    writeSongTags,
+    writeSongTagsBatch,
 };
 
 export type Utils = typeof utils;

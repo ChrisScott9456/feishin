@@ -22,9 +22,8 @@ import {
 import electronLocalShortcut from 'electron-localshortcut';
 import log from 'electron-log/main';
 import { AppImageUpdater, autoUpdater, MacUpdater, NsisUpdater } from 'electron-updater';
-import { access, constants, promises as fsPromises } from 'fs';
-import { TagLib } from 'taglib-wasm';
-import { applyCoverArt, clearPictures, readCoverArt } from 'taglib-wasm/simple';
+import { access, constants } from 'fs';
+import { createRequire } from 'module';
 import path, { join } from 'path';
 import semver from 'semver';
 
@@ -45,6 +44,10 @@ import {
 import './features';
 
 import { PlayerRepeat, PlayerStatus, PlayerType, TitleTheme } from '/@/shared/types/types';
+
+if (isWindows() && typeof (global as any).require !== 'function') {
+    (global as any).require = createRequire(__filename);
+}
 
 const ALPHA_UPDATER_CONFIG: {
     bucket: string;
@@ -1044,109 +1047,6 @@ if (!ipcMain.eventNames().includes('open-item')) {
                 resolve();
             });
         });
-    });
-}
-
-// Lazily initialized taglib-wasm singleton
-let _taglib: TagLib | null = null;
-const getTagLib = async (): Promise<TagLib> => {
-    if (!_taglib) _taglib = await TagLib.initialize();
-    return _taglib;
-};
-
-if (!ipcMain.eventNames().includes('check-file-writable')) {
-    ipcMain.handle('check-file-writable', async (_event, filePath: string) => {
-        return new Promise<{ error?: string; ok: boolean }>((resolve) => {
-            access(filePath, constants.F_OK | constants.W_OK, (err) => {
-                if (err) resolve({ error: err.message, ok: false });
-                else resolve({ ok: true });
-            });
-        });
-    });
-}
-
-if (!ipcMain.eventNames().includes('read-song-tags')) {
-    ipcMain.handle('read-song-tags', async (_event, filePath: string) => {
-        try {
-            const buf = await fsPromises.readFile(filePath);
-            const taglib = await getTagLib();
-            const file = await taglib.open(buf);
-            const properties = file.properties();
-            file.dispose();
-            return { ok: true, properties };
-        } catch (err) {
-            return { error: String(err), ok: false };
-        }
-    });
-}
-
-if (!ipcMain.eventNames().includes('write-song-tags')) {
-    ipcMain.handle(
-        'write-song-tags',
-        async (
-            _event,
-            filePath: string,
-            tags: Record<string, string>,
-            artworkOp?: { bytes: Uint8Array; mimeType: string; type: 'set' } | { type: 'clear' },
-        ) => {
-            try {
-                await fsPromises.access(filePath, constants.F_OK | constants.W_OK);
-                const buf = await fsPromises.readFile(filePath);
-                const taglib = await getTagLib();
-                let modified: Uint8Array = await taglib.edit(buf, (file) => {
-                    const propertyMap: Record<string, string[]> = {};
-                    for (const [k, v] of Object.entries(tags)) {
-                        propertyMap[k] = v === '' ? [] : [v];
-                    }
-                    file.setProperties(propertyMap);
-                });
-                if (artworkOp?.type === 'clear') {
-                    modified = await clearPictures(modified);
-                } else if (artworkOp?.type === 'set') {
-                    modified = await applyCoverArt(
-                        modified,
-                        Buffer.from(artworkOp.bytes),
-                        artworkOp.mimeType,
-                    );
-                }
-                await fsPromises.writeFile(filePath, modified);
-                return { ok: true };
-            } catch (err) {
-                return { error: String(err), ok: false };
-            }
-        },
-    );
-}
-
-if (!ipcMain.eventNames().includes('read-song-artwork')) {
-    ipcMain.handle('read-song-artwork', async (_event, filePath: string) => {
-        try {
-            const buf = await fsPromises.readFile(filePath);
-            const data = await readCoverArt(buf);
-            if (!data) return { ok: true, data: null };
-            const mimeType = data[0] === 0x89 ? 'image/png' : 'image/jpeg';
-            return { ok: true, data: Buffer.from(data).toString('base64'), mimeType };
-        } catch (err) {
-            return { error: String(err), ok: false };
-        }
-    });
-}
-
-if (!ipcMain.eventNames().includes('read-local-image')) {
-    ipcMain.handle('read-local-image', async (_event, filePath: string) => {
-        try {
-            const buf = await fsPromises.readFile(filePath);
-            const mimeType = /\.png$/i.test(filePath)
-                ? 'image/png'
-                : /\.gif$/i.test(filePath)
-                  ? 'image/gif'
-                  : /\.webp$/i.test(filePath)
-                    ? 'image/webp'
-                    : 'image/jpeg';
-            return { ok: true, data: buf.toString('base64'), mimeType };
-        } catch (err) {
-            return { error: String(err), ok: false };
-        }
     });
 }
 

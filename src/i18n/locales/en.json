@@ -598,7 +598,12 @@
             "tagsTab": "Tags",
             "artworkTab": "Artwork",
             "removeArtwork": "Remove Artwork",
-            "noArtwork": "No Artwork"
+            "noArtwork": "No Artwork",
+            "multipleValues": "(Multiple Values)",
+            "multipleArtworks": "Multiple Artworks",
+            "noLocalSongs": "No songs with local file paths found",
+            "readPartialFailure": "Could not read metadata from {{count}} of {{total}} file(s)",
+            "writePartialFailure": "Failed to save {{count}} file(s)"
         },
         "playlist": {
             "reorder": "Reordering only enabled when sorting by ID"
